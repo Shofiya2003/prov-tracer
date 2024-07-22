@@ -89,7 +89,7 @@ def provlog_to_digraph(process_tree_prov_log: ProvLog) -> nx.DiGraph:
         op = process_tree_prov_log.processes[pid].exec_epochs[exid].threads[tid].ops[op_index].data
         global target
         if isinstance(op, CloneOp):
-            if op.task_type == TaskType.TASK_PID:
+            if op.task_type == TaskType.TASK_TID:
                 # Spawning a thread links to the current PID and exec epoch
                 target = (pid, exid, op.task_id)
             if op.task_type == TaskType.TASK_PTHREAD:
@@ -97,7 +97,7 @@ def provlog_to_digraph(process_tree_prov_log: ProvLog) -> nx.DiGraph:
                 dest = get_first_pthread(pid, exid, target_pthread_id)
                 fork_join_edges.append((node, dest))
                 continue
-            else:
+            elif op.task_type == TaskType.TASK_PID:
                 # New process always links to exec epoch 0 and main thread
                 # THe TID of the main thread is the same as the PID
                 target = (op.task_id, 0, op.task_id)
