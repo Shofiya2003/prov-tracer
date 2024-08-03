@@ -34,7 +34,8 @@ def test_bash_in_bash() -> None:
     assert not analysis.validate_hb_graph(process_tree_prov_log, process_graph)
     paths = [f'{project_root}/flake.nix'.encode(), f'{project_root}/flake.lock'.encode()]
     process_file_map = {}
-    dfs_edges = list(nx.dfs_edges(process_graph))
+    start_node = [node for node, degree in process_graph.in_degree() if degree == 0][0]
+    dfs_edges = list(nx.dfs_edges(process_graph,source=start_node))
     parent_process_id = dfs_edges[0][0][0]
     process_file_map[f"{project_root}/flake.lock".encode()] = parent_process_id
     process_file_map[f"{project_root}/flake.nix".encode()] = parent_process_id
@@ -45,8 +46,9 @@ def test_bash_in_bash_pipe() -> None:
     process_tree_prov_log = execute_command(command)
     process_graph = analysis.provlog_to_digraph(process_tree_prov_log)
     assert not analysis.validate_hb_graph(process_tree_prov_log, process_graph)
+    start_node = [node for node, degree in process_graph.in_degree() if degree == 0][0]
+    dfs_edges = list(nx.dfs_edges(process_graph,source=start_node))
     paths = [f'{project_root}/flake.nix'.encode(), b'stdout']
-    dfs_edges = list(nx.dfs_edges(process_graph))
     check_for_clone_and_open(dfs_edges, process_tree_prov_log, len(paths), {}, paths)
 
 
@@ -56,7 +58,7 @@ def test_pthreads() -> None:
     assert not analysis.validate_hb_graph(process_tree_prov_log, process_graph)
     root_node = [n for n in process_graph.nodes() if process_graph.out_degree(n) > 0 and process_graph.in_degree(n) == 0][0]
     bfs_nodes = [node for layer in nx.bfs_layers(process_graph, root_node) for node in layer]
-    dfs_edges = list(nx.dfs_edges(process_graph))
+    dfs_edges = list(nx.dfs_edges(process_graph,source=root_node))
     total_pthreads = 3
     paths = [b'/tmp/0.txt', b'/tmp/1.txt', b'/tmp/2.txt']
     check_pthread_graph(bfs_nodes, dfs_edges, process_tree_prov_log, total_pthreads, paths)
@@ -102,6 +104,7 @@ def check_for_clone_and_open(
     current_child_process = 0
 
     for edge in dfs_edges:
+        print(edge)
         curr_pid, curr_epoch_idx, curr_tid, curr_op_idx = edge[0]
         
         curr_node_op = get_op_from_provlog(process_tree_prov_log, curr_pid, curr_epoch_idx, curr_tid, curr_op_idx)
@@ -126,10 +129,14 @@ def check_for_clone_and_open(
             if edge[1][3] == -1:
                 continue
             current_child_process+=1
+            print(">>>>>>>>>>>>>>>>>>")
+            print(curr_node_op)
             check_wait.append(curr_node_op_data.task_id)
             if len(paths)!=0:
                 process_file_map[paths[current_child_process-1]] = curr_node_op_data.task_id
         elif(isinstance(curr_node_op_data,WaitOp)):
+            print(edge)
+            print(curr_node_op_data)
             ret_pid = curr_node_op_data.task_id
             wait_option = curr_node_op_data.options
             if wait_option == 0:
