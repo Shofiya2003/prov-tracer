@@ -432,11 +432,18 @@ def lookup_provenance_remote(host: Host, path: pathlib.Path) -> ProvenanceInfo:
 
 
 def find_new_files_local(source: HostPath, destination: pathlib.Path) -> list[pathlib.Path]:
-    raise NotImplementedError()
-
+    source_path = source.path
+    destination_path = destination.path
+    file_name = os.path.basename(source_path)
+    final_path = destination_path / file_name
+    return [final_path]
 
 def find_new_files_remote(source: HostPath, destination: HostPath) -> list[pathlib.Path]:
-    raise NotImplementedError()
+    source_path = source.path
+    destination_path = destination.path
+    file_name = os.path.basename(source_path)
+    final_path = destination_path / file_name
+    return [final_path]
 
 
 def augment_provenance_local(
